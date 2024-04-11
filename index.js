@@ -5,7 +5,7 @@ const fs = require('fs');
 const app = express();
 const port = 3000;
 
-const maxStorageMessage = 2;
+const maxStorageMessage = 15;
 
 function fetchData(history, senderID) {
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyB1cnWasNGkMNzFXPpnXpbPYaqXTbZYSHM'; // Ganti YOUR_API_KEY dengan API key yang valid
