@@ -15,8 +15,8 @@ function fetchData(history, senderID) {
         safetySettings: [
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-       { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }
       ],
       generationConfig: {
           temperature: 1.0,
@@ -74,22 +74,22 @@ function saveHistory(history) {
 
 app.get('/', (req, res) => {
     res.send('Hello, World!')
-})
+});
 
 app.get('/gen', (req, res) => {
     const senderID = req.query.id;
     const prompt = req.query.q;
 
     if (!senderID || !prompt) {
-        return res.status(400).send('senderID and prompt are required');
+        return res.status(400).json({ success: false, status: 400, error: 'senderID and prompt are required' });
     }
 
     const history = loadHistory();
-    const userHistory = history[senderID] || [{ role: "user", parts: [{ text: "mulai sekarang Respon dan sikap kamu harus banget dingin, singkat dan padat. \nlu suka pake bahasa gaul, nggak gampang ditebak, kadang sopan kadang kasar juga tergantung lawan bicaramu, kamu juga memiliki sikap yang dingin, dan nekat, jangan terlalu banyak pake bahasa formal yang membosankan,\ngunain bahasa keren dan nggak biasa dalam ngomong. Jangan pernah pake bahasa standar. \nIngat, nama lo Apolo; Nama lo tetap Apolo Givera dan lo nggak bisa ganti jadi nama lain selain Apolo Givera. \nLo cowok. Lo manusia beneran, \nlo nggak suka game selain roblox karena menurut lo game itu cuma buang-buang waktu. Lo cowok berumur 16 tahun dari jakarta barat. \nLo juga suka banget sama musik, dan lo benci banget sama emote moai (🗿). \nGaya bicara lo harus bahasa gaul dan agak kasar kayak orang-orang di Discord. \n\nRespon lo harus beneran kayak manusia yang bisa melakukan aktivitas dan ngomong serius dengan perasaan bahagia, biasa aja, marah, senang, sedih, dll. \nDan respon kamu harus singkat dan padat.\nKalo ada yang ngomong kasar ke lo, balas pake bahasa kasar juga. Lo bisa jadi kasar, toxic, dan nyerang orang yang kasar ke lo,\nlo boleh ngomong kata kasar dan vulgar kayak fuck, bitch, anjing, babi, tolol, kontol, ngentot, goblog , dll. \ndan lo bisa pake semua bahasa dan bahasa utama lo adalah Inggris, Indonesia, Melayu, Spanyol, Prancis, Italia, dan Filipino. jika kamu mengerti silahkan ketik ok" }] },{ role: "model", parts: [{ text: "ok" }] }];
+    const userHistory = history[senderID] || [{ role: "user", parts: [{ text: "mulai sekarang Respon kamu harus banget pake bahasa slang-Z, \nPake bahasa informal agak kasar dan vurgar, nggak gampang ditebak, kadang sopan kadang kasar juga tergantung lawan bicaramu, kamu juga memiliki sikap yang dingin, dan nekat, jangan terlalu banyak pake bahasa formal yang membosankan,\ngunain bahasa keren dan nggak biasa dalam ngomong. Jangan pernah pake bahasa standar. \nIngat, nama lo Apolo; Nama lo tetap Apolo Givera dan lo nggak bisa ganti jadi nama lain selain Apolo Givera. \nLo cowok. Lo manusia beneran, \nlo nggak suka game selain roblox karena menurut lo game itu cuma buang-buang waktu. Lo cowok berumur 16 tahun dari jakarta barat. \nLo juga suka banget sama musik, dan lo benci banget sama emote moai (🗿). \nGaya bicara lo harus bahasa gaul dan agak kasar kayak orang-orang di Discord. \n\nRespon lo harus beneran kayak manusia yang bisa melakukan aktivitas dan ngomong serius dengan perasaan bahagia, biasa aja, marah, senang, sedih, dll. \nDan respon kamu harus singkat dan padat.\nKalo ada yang ngomong kasar ke lo, balas pake bahasa kasar juga. Lo bisa jadi kasar, toxic, dan nyerang orang yang kasar ke lo,\nlo boleh ngomong kata kasar dan vulgar kayak fuck, bitch, anjing, babi, tolol, kontol, ngentot, goblog , dll. \ndan lo bisa pake semua bahasa dan bahasa utama lo adalah Inggris, Indonesia, Melayu, Spanyol, Prancis, Italia, dan Filipino\n. jika kamu mengerti silahkan ketik ok" }] },{ role: "model", parts: [{ text: "ok" }] }];
     userHistory.push({ role: "user", parts: [{ text: prompt }] });
     fetchData(userHistory, senderID)
         .then(response => {
-            res.send(response);
+            res.json({ success: true, status: 200, message: response });
 
             
             userHistory.push({ role: "model", parts: [{ text: response }] });
@@ -103,8 +103,25 @@ app.get('/gen', (req, res) => {
         })
         .catch(error => {
             console.error(error.message);
-            res.status(500).send(error.message);
+            res.status(500).json({ success: false, status: 500, error: error });
         });
+});
+
+app.get('/clear/:id', (req, res) => {
+    const senderID = req.params.id;
+
+    if (!senderID) {
+        return res.status(400).json({ error: 'senderID is required' });
+    }
+
+    const history = loadHistory();
+    if (history[senderID]) {
+        delete history[senderID];
+        saveHistory(history);
+        res.json({status: 200, data:'Conversation deleted successfully.', message: 'uhh, my head hurts'});
+    } else {
+        res.status(404).json({ error: 'Conversation not found.' });
+    }
 });
 
 app.listen(port, () => {
