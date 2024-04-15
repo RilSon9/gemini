@@ -5,7 +5,7 @@ import fs from 'fs';
 const app = express();
 const port = 3000;
 
-const maxStorageMessage = 24;
+const maxStorageMessage = 26;
 
 function fetchData(history, senderID) {
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyB1cnWasNGkMNzFXPpnXpbPYaqXTbZYSHM'; 
