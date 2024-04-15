@@ -2,7 +2,7 @@
   "name": "nodejs",
   "type": "module",
   "version": "1.0.0",
-  "description": "",
+  "description": "simple code for api gemini ai by google",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
