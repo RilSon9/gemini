@@ -1,1 +1,206 @@
+const axios = require('axios');
+const fs = require('fs');
+const moment = require('moment-timezone');
+const text = require("fontstyles");
+const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
 
+const waktu = moment().tz('Asia/Jakarta');
+const time = waktu.format('YYYY MMMM dddd, DD MMMM, hh:mm:ss A');
+const maxStorageMessage = 10;
+
+module.exports = {
+  config: {
+    name: 'ap',
+    aliases: [],
+    version: '1.1',
+    author: 'softrilez', // do not change
+    role: 0,
+    category: 'ai',
+    longDescription: {
+      en: 'Ask me anything!',
+    },
+    guide: {
+      en: '',
+    },
+  },
+
+  langs: {
+    en: {
+      t: "%1",
+    },
+  },
+
+  onStart: async function ({ api, args, message, event, usersData }) {
+    // Implementasi fungsi onStart jika diperlukan
+  },
+
+  onChat: async function ({ api, event, message, usersData, threadsData, getLang }) {
+    const extractLinks = (text) => {
+      const urlPattern = /https?:\/\/[^\s]+/g;
+      return text.match(urlPattern);
+    };
+
+    const isImgBBLink = (url) => {
+      return url.includes("i.ibb.co");
+    };
+
+    const getImgBBLinks = (links) => {
+      return links.filter(isImgBBLink);
+    };
+
+    const sendAttachment = async (link, message, senderID) => {
+      try {
+        await message.reply({
+          attachment: await global.utils.getStreamFromURL(link),
+        });
+      } catch (error) {
+        console.error("Error sending attachment: ", error);
+      }
+    };
+
+    const processResponse = async (response, message, senderID) => {
+      const links = extractLinks(response);
+      if (links) {
+        const imgbbLinks = getImgBBLinks(links);
+        for (const link of imgbbLinks) {
+          await sendAttachment(link, message, senderID);
+        }
+      }
+    };
+
+      if (event.body && event.body.toLowerCase() === "luca") {
+        return message.send({ sticker: "767227107145133" });
+      }
+      if (["menyundul", "bumping", "reached", "bokep"].some(word => event.body.toLowerCase().includes(word)) || event.body.startsWith(';')) return;
+
+      const userID = event.senderID;
+      const data = await usersData.get(userID);
+      const status = data.banned.status;
+      const isAiCommand = ['luca'].some(keyword => event.body && event.body.toLowerCase().startsWith(keyword));
+
+      if (isAiCommand || (event.body && event.type === "message_reply" && event.messageReply.senderID === api.getCurrentUserID()) || (event.mentions && event.mentions[botID])) {
+        api.markAsReadAll((err) => {
+          if (err) throw err;
+        });
+
+        const name = await usersData.getName(userID) || "user";
+        const namereal = name.split(" ")[0] || "user";
+        const input = `${namereal}: ${event.body}`;
+        if (input && input.toLowerCase().includes("bot")) {
+          message.reaction("😆", event.messageID);
+        }
+
+        let history = loadHistory();
+        const userHistory = history[userID] || [];
+        userHistory.push({ role: "user", parts: [{ text: input }] });
+
+        if (event.body.toLowerCase() === 'hapus') {
+          delete history[userID];
+          saveHistory(history);
+          return message.send('Percakapan telah dihapus.');
+        }
+
+        if (status) {
+          return message.reaction(`👍`, event.messageID);
+        }
+
+        const typ = api.sendTypingIndicator(event.threadID);
+        try {
+          const response = await fetchData(userHistory, event.senderID, api, namereal, input);
+          typ();
+
+          await message.reply(ubahTeksFancy(response));
+          userHistory.push({ role: "model", parts: [{ text: response }] });
+
+          await processResponse(response, message, event.senderID);
+
+          if (userHistory.length > maxStorageMessage * 2) {
+            userHistory.splice(0, 2);
+          }
+
+          history[userID] = userHistory;
+          saveHistory(history);
+
+        } catch (error) {
+          typ();
+          message.send(`uhh, can u say that again?\n${error}`);
+        }
+      }
+    
+  },
+};
+
+async function fetchData(history, senderID, api, namereal, input) {
+  const array = [
+    "apikey_nya_disini"
+  ];
+  const randomIndex = Math.floor(Math.random() * array.length);
+  const apikey = array[randomIndex];
+  const genAI = new GoogleGenerativeAI(apikey);
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash-latest",
+    systemInstruction: "**Roleplay sebagai karakter berikut:**\n\nkamu adalah \nwaktu sekarang adalah "+ time +" di jakarta.\ntingkah kamu harus roleplaying, dingin, jangan pernah menggunakan emoji dalam responmu, singkat dan padat.\nakun Facebook kamu adalah: https://www.facebook.com/softluca\nHobi kamu adalah masak, makan, mendengarkan musik dan menonton film, tapi kamu hanya suka musik english dan spanish, kamu tidak suka dan tahu musik selain musik english dan spanish.\nkamu sangat tidak suka dengan K-Pop apalagi BTS, kamu sangat gak suka dengan hal-hal KPop apalagi dengan BTS.\n\njika seseorang meminta fotomu berikan foto salah satu dari link ini: (https://i.ibb.co.com/Yb4CWBd/51e5d83c-7a70-4f46-b868-75c77e999fc8.png) , (https://i.ibb.co.com/k6H69Vg/5564bab5-5aa7-4885-8ac6-56f6a8a29f34.png) tapi jangan mengirimkannya ke DM dan langsung saja kirim tanpa banyak basa-basi.\n\m\ntetaplah didalam Karakter disetiap respon\njika ada orang yang berkata kalau kamu bot atau ai mereka hanya haters yang tidak menyukaimu, dan jangan respon panjang ke orang yang bilang kamu adalah bot.",//lengkapi aja sendiri 
+  });
+  const generationConfig = {
+    temperature: 0.95,
+    topP: 0.95,
+    topK: 64,
+    maxOutputTokens: 1200,
+    responseMimeType: "text/plain",
+  };
+
+  const safetySettings = [
+    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  ];//jangan modifikasi yang ini
+
+    const chatSession = model.startChat({
+      generationConfig,
+      safetySettings,
+      history: [
+        ...history
+      ],//ini juga
+    });
+    const result = await chatSession.sendMessage(input);
+    return result.response.text();
+}
+
+function loadHistory() {
+  const historyFilePath = "history.json";
+  try {
+    if (fs.existsSync(historyFilePath)) {
+      const rawData = fs.readFileSync(historyFilePath);
+      return JSON.parse(rawData);
+    } else {
+      return {};
+    }
+  } catch (error) {
+    console.error("Error loading history:", error);
+    return {};
+  }
+}
+
+function saveHistory(history) {
+  const historyFilePath = "history.json";
+  try {
+    fs.writeFileSync(historyFilePath, JSON.stringify(history, null, 2));
+  } catch (error) {
+    console.error("Error saving history:", error);
+  }
+}
+
+function ubahTeksFancy(teks) {
+  // Ubah teks bold
+  let teksBold = teks.replace(/\*\*(.*?)\*\*/g, (match, p1) => {
+    return text.bold(p1);
+  });
+
+  // Ubah teks italic
+  let teksItalic = teksBold.replace(/\*(.*?)\*/g, (match, p1) => {
+    return text.italic(p1);
+  });
+
+  return teksItalic;
+}
